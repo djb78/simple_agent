@@ -16,6 +16,7 @@ def main():
 
     # setup command line parser to bring in user input
     parser = argparse.ArgumentParser(description="ai prompt")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("prompt", type=str, help="prompt for Gemini")
     args = parser.parse_args()
 
@@ -24,11 +25,16 @@ def main():
     # send request with user prompt
     answer = client.models.generate_content(model=model, contents=prompts)
 
-    if not answer.usage_metadata:
-        raise RuntimeError("no response metadata, possible failed API request")
+    # VERBOSE output
+    if args.verbose:
+        print(f"User prompt: {args.prompt}")
+        # display usage data for this request
+        if not answer.usage_metadata:
+            raise RuntimeError("no response metadata, possible failed API request")
+        print(f"Prompt tokens: {answer.usage_metadata.prompt_token_count}")
+        print(f"Response tokens: {answer.usage_metadata.candidates_token_count}")
 
-    print(f"Prompt tokens: {answer.usage_metadata.prompt_token_count}\nResponse tokens: {answer.usage_metadata.candidates_token_count}")
-
+    # display response to request
     print(f"Response: {answer.text}")
 
 
