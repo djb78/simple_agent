@@ -3,6 +3,7 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from prompts import system_prompt
 
 def main():
     load_dotenv()
@@ -23,7 +24,11 @@ def main():
     prompts = [types.Content(role="user", parts=[types.Part(text=args.prompt)])]
 
     # send request with user prompt
-    answer = client.models.generate_content(model=model, contents=prompts)
+    answer = client.models.generate_content(
+        model=model, 
+        contents=prompts, 
+        config=types.GenerateContentConfig(system_instruction=system_prompt)
+    )
 
     # VERBOSE output
     if args.verbose:
