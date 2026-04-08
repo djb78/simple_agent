@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompts import system_prompt
+from call_function import available_functions
 
 def main():
     load_dotenv()
@@ -27,7 +28,10 @@ def main():
     answer = client.models.generate_content(
         model=model, 
         contents=prompts, 
-        config=types.GenerateContentConfig(system_instruction=system_prompt)
+        config=types.GenerateContentConfig(
+            tools=[available_functions],
+            system_instruction=system_prompt
+        )
     )
 
     # VERBOSE output
@@ -40,7 +44,11 @@ def main():
         print(f"Response tokens: {answer.usage_metadata.candidates_token_count}")
 
     # display response to request
-    print(f"Response: {answer.text}")
+    if answer.function_calls is None:
+        print(f"Response: {answer.text}")
+    else:
+        for function in answer.function_calls:
+            print(f"Calling function: {function.name}({function.args})")
 
 
 if __name__ == "__main__":
