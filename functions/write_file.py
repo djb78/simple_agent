@@ -1,5 +1,7 @@
 
 import os
+from google import genai
+from google.genai import types
 
 def write_file(working_directory, file_path, content):
     try:
@@ -30,5 +32,24 @@ def write_file(working_directory, file_path, content):
             return f"Successfully wrote to \"{file_path}\" ({len(content)} characters written)"
     except Exception as e:
             return f"Error: exception - {e}"
+    
+# Gemini API schema to describe the function for LLM callers    
+schema_write_file = types.FunctionDeclaration(
+    name="write_file",
+    description="Safely creates or overwrites files in the working directory",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="relative path from the working directory of the file to be written",
+            ),
+            "content": types.Schema(
+                type=types.Type.STRING,
+                description="content that will be written to the file designated by file_path",
+            ),
+        },
+    ),
+)
 
     

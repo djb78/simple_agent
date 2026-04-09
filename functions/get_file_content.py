@@ -1,5 +1,7 @@
 import os
 import config
+from google import genai
+from google.genai import types
 
 def get_file_content(working_directory, file_path):
     try:
@@ -28,4 +30,19 @@ def get_file_content(working_directory, file_path):
         return content        
     except Exception as e:
           return f'Error: exception - {e}'
+    
+# Gemini API schema to describe the function for LLM callers    
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="opens file and returns string containing first 10000 characters",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="relative path from the working directory of the file to be read",
+            ),
+        },
+    ),
+)
         

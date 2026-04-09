@@ -1,5 +1,7 @@
 import os
 import subprocess
+from google import genai
+from google.genai import types
 
 def run_python_file(working_directory, file_path, args=None):
     try:
@@ -48,3 +50,25 @@ def run_python_file(working_directory, file_path, args=None):
 
 # Or even simpler, return a tuple of (abs_working_dir, abs_target, is_valid) so callers can still compose their own error messages.
 # If this were a production codebase, you'd absolutely want a shared utility like functions/path_utils.py to house it.
+    
+# Gemini API schema to describe the function for LLM callers    
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="runs code from a python file with optional arguments",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="relative path from the working directory of the file to be run",
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                description="array containing the command line arguments to be included when running the file at file_path",
+                items=types.Schema(
+                     type=types.Type.STRING,
+                )
+            ),
+        },
+    ),
+)
