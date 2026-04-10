@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompts import system_prompt
-from call_function import available_functions
+from call_function import available_functions, call_function
 
 def main():
     load_dotenv()
@@ -34,12 +34,11 @@ def main():
         )
     )
 
-    # VERBOSE output
+    if not answer.usage_metadata:
+        raise RuntimeError("no response metadata, possible failed API request")
+    
     if args.verbose:
         print(f"User prompt: {args.prompt}")
-        # display usage data for this request
-        if not answer.usage_metadata:
-            raise RuntimeError("no response metadata, possible failed API request")
         print(f"Prompt tokens: {answer.usage_metadata.prompt_token_count}")
         print(f"Response tokens: {answer.usage_metadata.candidates_token_count}")
 
@@ -47,8 +46,24 @@ def main():
     if answer.function_calls is None:
         print(f"Response: {answer.text}")
     else:
+        function_results = []
+        # calls functions based on LLM response
         for function in answer.function_calls:
-            print(f"Calling function: {function.name}({function.args})")
+            function_result = call_function(function)
+
+            # verifies that some response came back from the function call
+            if not function_result.parts:
+                raise Exception("no .parts list associated with function_result")
+            if function_result.parts[0].function_response is None:
+                raise Exception("function_result.parts[0].function_response is None")
+            if function_result.parts[0].function_response.response is None:
+                raise Exception("function_result.parts[0].function_response.response is None")
+            
+            function_results.append(function_result.parts[0])
+
+            if args.verbose:
+                print(f"-> {function_result.parts[0].function_response.response}")
+
 
 
 if __name__ == "__main__":
