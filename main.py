@@ -1,3 +1,4 @@
+import sys
 import os
 import argparse
 from dotenv import load_dotenv
@@ -22,47 +23,59 @@ def main():
     parser.add_argument("prompt", type=str, help="prompt for Gemini")
     args = parser.parse_args()
 
-    prompts = [types.Content(role="user", parts=[types.Part(text=args.prompt)])]
+    messages = [types.Content(role="user", parts=[types.Part(text=args.prompt)])]
 
-    # send request with user prompt
-    answer = client.models.generate_content(
-        model=model, 
-        contents=prompts, 
-        config=types.GenerateContentConfig(
-            tools=[available_functions],
-            system_instruction=system_prompt
+    # agent feedback loop
+    for _ in range(20):
+        # send request with user prompt
+        answer = client.models.generate_content(
+            model=model, 
+            contents=messages, 
+            config=types.GenerateContentConfig(
+                tools=[available_functions],
+                system_instruction=system_prompt
+            )
         )
-    )
 
-    if not answer.usage_metadata:
-        raise RuntimeError("no response metadata, possible failed API request")
-    
-    if args.verbose:
-        print(f"User prompt: {args.prompt}")
-        print(f"Prompt tokens: {answer.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {answer.usage_metadata.candidates_token_count}")
+        if answer.candidates:
+            for candidate in answer.candidates:
+                messages.append(candidate.content)
 
-    # display response to request
-    if answer.function_calls is None:
-        print(f"Response: {answer.text}")
-    else:
-        function_results = []
-        # calls functions based on LLM response
-        for function in answer.function_calls:
-            function_result = call_function(function)
+        if not answer.usage_metadata:
+            raise RuntimeError("no response metadata, possible failed API request")
+        
+        if args.verbose:
+            print(f"User prompt: {args.prompt}")
+            print(f"Prompt tokens: {answer.usage_metadata.prompt_token_count}")
+            print(f"Response tokens: {answer.usage_metadata.candidates_token_count}")
 
-            # verifies that some response came back from the function call
-            if not function_result.parts:
-                raise Exception("no .parts list associated with function_result")
-            if function_result.parts[0].function_response is None:
-                raise Exception("function_result.parts[0].function_response is None")
-            if function_result.parts[0].function_response.response is None:
-                raise Exception("function_result.parts[0].function_response.response is None")
-            
-            function_results.append(function_result.parts[0])
+        # display response to request
+        if answer.function_calls is None:
+            print(f"Response: {answer.text}")
+            return 0
+        else:
+            function_results = []
+            # calls functions based on LLM response
+            for function in answer.function_calls:
+                function_result = call_function(function)
 
-            if args.verbose:
-                print(f"-> {function_result.parts[0].function_response.response}")
+                # verifies that some response came back from the function call
+                if not function_result.parts:
+                    raise Exception("no .parts list associated with function_result")
+                if function_result.parts[0].function_response is None:
+                    raise Exception("function_result.parts[0].function_response is None")
+                if function_result.parts[0].function_response.response is None:
+                    raise Exception("function_result.parts[0].function_response.response is None")
+                
+                function_results.append(function_result.parts[0])
+
+                if args.verbose:
+                    print(f"-> {function_result.parts[0].function_response.response}")
+
+            messages.append(types.Content(role="user", parts=function_results))
+
+    print("agent loop exceeded max iterations")
+    sys.exit(1)
 
 
 
